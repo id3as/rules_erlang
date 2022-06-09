@@ -57,7 +57,7 @@ def _impl(ctx):
         pa_args.extend(["-pa", dir])
 
     srcs = ctx.actions.args()
-    srcs.add_all(ctx.files.srcs)
+    srcs.add_all(ctx.files.srcs, omit_if_empty=False)
 
     (erlang_home, _, runfiles) = erlang_dirs(ctx)
 
@@ -68,6 +68,9 @@ def _impl(ctx):
         runfiles = runfiles.merge(compile_first[DefaultInfo].default_runfiles)
 
     script = """set -euo pipefail
+
+echo "SCRIPT_ARGS: $@"
+echo "SRCS: {srcs}"
 
 {maybe_install_erlang}
 
@@ -94,7 +97,7 @@ if [ -n "$FIRST" ]; then
 else
     "{erlang_home}"/bin/erlc \\
         -v {include_args} {pa_args} -o {out_dir} {erlc_opts} \\
-        $@
+        {srcs}
 fi
     """.format(
         maybe_install_erlang = maybe_install_erlang(ctx),
@@ -105,6 +108,8 @@ fi
         include_args = " ".join(include_args),
         pa_args = " ".join(pa_args),
         out_dir = dest_dir,
+        # passing the sources as args results in a ginormous list, and bazel bails out at some point
+        srcs = " ".join([f.path for f in ctx.files.srcs]),
         erlc_opts = " ".join(["'{}'".format(opt) for opt in ctx.attr.erlc_opts]),
     )
 

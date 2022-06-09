@@ -7,7 +7,7 @@ load(
 )
 
 DEFAULT_ERLC_OPTS = [
-    "-Werror",
+    #"-Werror",
     "+deterministic",
     "+debug_info",
     "+warn_export_vars",
