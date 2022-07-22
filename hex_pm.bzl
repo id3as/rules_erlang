@@ -8,16 +8,18 @@ def hex_pm_erlang_app(
         deps = [],
         runtime_deps = [],
         **kwargs):
-    hex_archive(
-        name = name,
-        version = version,
-        build_file_content = _BUILD_FILE_TEMPLATE.format(
+    if not ("build_file" in kwargs.keys() or "build_file_content" in kwargs.keys()):
+        kwargs.update(build_file_content = _BUILD_FILE_TEMPLATE.format(
             app_name = name,
             version = version,
             erlc_opts = erlc_opts,
             deps = deps,
             runtime_deps = runtime_deps,
-        ),
+        ))
+
+    hex_archive(
+        name = name,
+        version = version,
         **kwargs
     )
 
