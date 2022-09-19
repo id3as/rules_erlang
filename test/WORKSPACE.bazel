@@ -48,7 +48,7 @@ load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 git_repository(
     name = "rbe",
-    commit = "3dea2dea9721349ba06938a34e52d683e04e975b",  # linux-rbe branch
+    commit = "72e6a405697d8184d0533976ca9af36ed4ea2f2a",  # linux-rbe branch
     remote = "https://github.com/rabbitmq/rbe-erlang-platform.git",
 )
 
@@ -59,12 +59,19 @@ local_repository(
 
 load(
     "@rules_erlang//:rules_erlang.bzl",
+    "erlang_config",
+    "internal_erlang_from_github_release",
     "rules_erlang_dependencies",
+)
+
+erlang_config(
+    internal_erlang_configs = [
+        internal_erlang_from_github_release(),
+    ],
 )
 
 rules_erlang_dependencies()
 
-register_toolchains(
-    "//:erlang_toolchain_external",
-    "//:erlang_toolchain_25",
-)
+load("@erlang_config//:defaults.bzl", "register_defaults")
+
+register_defaults()

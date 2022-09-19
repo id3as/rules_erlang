@@ -24,18 +24,25 @@ bazel_skylib_workspace()
 
 http_archive(
     name = "rules_erlang",
-    sha256 = "66a48be2c1058d8cb8a1a35721599c825d1ffc644d3c1c1a32d4b0b6ae60627e",
-    strip_prefix = "rules_erlang-3.0.1",
-    urls = ["https://github.com/rabbitmq/rules_erlang/archive/refs/tags/3.0.1.zip"],
+    strip_prefix = "rules_erlang-3.6.3",
+    urls = ["https://github.com/rabbitmq/rules_erlang/archive/refs/tags/3.6.3.zip"],
 )
 
-load("@rules_erlang//:rules_erlang.bzl", "rules_erlang_dependencies")
+load(
+    "@rules_erlang//:rules_erlang.bzl",
+    "erlang_config",
+    "internal_erlang_from_github_release",
+    "rules_erlang_dependencies",
+)
+
+erlang_config()
 
 rules_erlang_dependencies()
 
-register_toolchains(
-    "@rules_erlang//:erlang_toolchain_external",
-)
+load("@erlang_config//:defaults.bzl", "register_defaults")
+
+register_defaults()
+
 ```
 
 ### `BUILD` file
@@ -68,16 +75,6 @@ assert_suites([
         name = "unit_SUITE",
     ),
 ])
-```
-
-### `.bazelrc` file
-
-```shell
-build --@rules_erlang//:erlang_home=/path/to/erlang
-build --@rules_erlang//:erlang_version=23.2
-
-build --platforms=@rules_erlang//platforms:erlang_external_platform
-build --extra_execution_platforms=@rules_erlang//platforms:erlang_external_platform
 ```
 
 ### Compile and run all tests
@@ -119,12 +116,17 @@ my_erlang_app
     └── unit_SUITE.erl
 ```
 
-And that the convention is followed where, using the `dest` attribute of the `erlc` rule:
+And that the convention is followed where, using the `dest` attribute of the `erlang_bytecode` rule:
 1. Compiled production bytecode is placed in `ebin`
 2. Compiled test bytecode is placed in `src`
 3. Compiled test suite and test helper bytecode is placed in `test`
 
 The example above follows these conventions.
+
+## Additional examples
+
+- https://github.com/rabbitmq/lz4-erlang uses rules_erlang with bzlmod and compiles native extensions
+- https://github.com/rabbitmq/rabbitmq-server provides a complex example of usage
 
 ## Copyright and License
 

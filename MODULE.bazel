@@ -1,6 +1,6 @@
 module(
     name = "rules_erlang",
-    version = "3.2.0",
+    version = "3.6.3",
     compatibility_level = 3,
 )
 
@@ -23,4 +23,18 @@ use_repo(
     erlang_package,
     "getopt_src",
     "xref_runner_src",
+)
+
+erlang_config_extension = use_extension(
+    "@rules_erlang//bzlmod:extensions.bzl",
+    "erlang_config",
+)
+
+use_repo(
+    erlang_config_extension,
+    "erlang_config",
+)
+
+register_toolchains(
+    "@erlang_config//external:toolchain",
 )

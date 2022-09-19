@@ -1,7 +1,6 @@
 load(
     ":hex_pm.bzl",
     "hex_package_info",
-    "newest",
     "satisfies",
 )
 load(
@@ -13,8 +12,103 @@ load(
     "without_requirement",
 )
 load(
+    ":semver.bzl",
+    "lt",
+    "version_from_string",
+)
+load(
     "//:rules_erlang.bzl",
     "xref_runner_sources",
+)
+load(
+    "//repositories:erlang_config.bzl",
+    "INSTALLATION_TYPE_EXTERNAL",
+    "INSTALLATION_TYPE_INTERNAL",
+    _erlang_config_rule = "erlang_config",
+)
+load(
+    "//tools:erlang.bzl",
+    "DEFAULT_ERLANG_SHA256",
+    "DEFAULT_ERLANG_VERSION",
+)
+
+def _erlang_config(ctx):
+    types = {}
+    versions = {}
+    urls = {}
+    strip_prefixs = {}
+    sha256s = {}
+    erlang_homes = {}
+
+    for mod in ctx.modules:
+        for erlang in mod.tags.external_erlang_from_path:
+            types[erlang.name] = INSTALLATION_TYPE_EXTERNAL
+            versions[erlang.name] = erlang.version
+            erlang_homes[erlang.name] = erlang.erlang_home
+
+        for erlang in mod.tags.internal_erlang_from_http_archive:
+            types[erlang.name] = INSTALLATION_TYPE_INTERNAL
+            versions[erlang.name] = erlang.version
+            urls[erlang.name] = erlang.url
+            strip_prefixs[erlang.name] = erlang.strip_prefix
+            sha256s[erlang.name] = erlang.sha256
+
+        for erlang in mod.tags.internal_erlang_from_github_release:
+            url = "https://github.com/erlang/otp/releases/download/OTP-{v}/otp_src_{v}.tar.gz".format(
+                v = erlang.version,
+            )
+            strip_prefix = "otp_src_{}".format(erlang.version)
+
+            types[erlang.name] = INSTALLATION_TYPE_INTERNAL
+            versions[erlang.name] = erlang.version
+            urls[erlang.name] = url
+            strip_prefixs[erlang.name] = strip_prefix
+            sha256s[erlang.name] = erlang.sha256
+
+    _erlang_config_rule(
+        name = "erlang_config",
+        rules_erlang_workspace = "@rules_erlang",
+        types = types,
+        versions = versions,
+        urls = urls,
+        strip_prefixs = strip_prefixs,
+        sha256s = sha256s,
+        erlang_homes = erlang_homes,
+    )
+
+external_erlang_from_path = tag_class(attrs = {
+    "name": attr.string(),
+    "version": attr.string(),
+    "erlang_home": attr.string(),
+})
+
+internal_erlang_from_http_archive = tag_class(attrs = {
+    "name": attr.string(),
+    "version": attr.string(),
+    "url": attr.string(),
+    "strip_prefix": attr.string(),
+    "sha256": attr.string(),
+})
+
+internal_erlang_from_github_release = tag_class(attrs = {
+    "name": attr.string(
+        default = "internal",
+    ),
+    "version": attr.string(
+        default = DEFAULT_ERLANG_VERSION,
+    ),
+    "sha256": attr.string(
+        default = DEFAULT_ERLANG_SHA256,
+    ),
+})
+
+erlang_config = module_extension(
+    implementation = _erlang_config,
+    tag_classes = {
+        "external_erlang_from_path": external_erlang_from_path,
+        "internal_erlang_from_http_archive": internal_erlang_from_http_archive,
+        "internal_erlang_from_github_release": internal_erlang_from_github_release,
+    },
 )
 
 _RESOLVE_MAX_PASSES = 500
@@ -76,6 +170,25 @@ def _resolve_hex_pm(ctx, packages):
             return resolved
     fail("Dependencies were not resolved after {} passes.".format(_RESOLVE_MAX_PASSES))
 
+def _newest(a, b):
+    if a.version == b.version:
+        return a
+
+    a_version = version_from_string(a.version)
+    b_version = version_from_string(b.version)
+    if a_version == None or b_version == None:
+        fail("Version {dep_name}@{a_version} (required by {a_module}) & {dep_name}@{b_version} (required by {b_module}) cannot be resolved".format(
+            dep_name = a.name,
+            a_version = a.version,
+            a_module = a.module.name,
+            b_version = b.version,
+            b_module = b.module.name,
+        ))
+    elif lt(a_version, b_version):
+        return b
+    else:
+        return a
+
 def _resolve_local(packages):
     deduped = []
     packages_by_name = {}
@@ -87,7 +200,7 @@ def _resolve_local(packages):
     for (_, dupes) in packages_by_name.items():
         p = dupes[0]
         for dupe in dupes[1:]:
-            p = newest(p, dupe)
+            p = _newest(p, dupe)
         deduped.append(p)
     return deduped
 
@@ -99,12 +212,14 @@ def _erlang_package(ctx):
         for dep in mod.tags.hex_package_tree:
             packages.append(hex_tree(
                 ctx,
+                module = mod,
                 name = dep.name,
                 version = dep.version,
             ))
         for dep in mod.tags.hex_package:
             packages.append(hex_package(
                 ctx,
+                module = mod,
                 name = dep.name,
                 version = dep.version,
                 sha256 = dep.sha256,
@@ -114,6 +229,7 @@ def _erlang_package(ctx):
         for dep in mod.tags.git_package:
             packages.append(git_package(
                 ctx,
+                module = mod,
                 dep = dep,
             ))
 

@@ -3,6 +3,13 @@ load(
     "string_flag",
 )
 
+config_setting(
+    name = "debug_build",
+    values = {
+        "compilation_mode": "dbg",
+    },
+)
+
 string_flag(
     name = "erlang_home",
     build_setting_default = "",
@@ -14,10 +21,3 @@ string_flag(
     build_setting_default = "",
     visibility = ["//visibility:public"],
 )
-
-load(
-    "//tools:erlang.bzl",
-    "erlang_toolchain_external",
-)
-
-erlang_toolchain_external()
