@@ -93,7 +93,7 @@ if [ -n "$FIRST" ]; then
         $@
 else
     "{erlang_home}"/bin/erlc \\
-        -v {include_args} {pa_args} -o {out_dir} {erlc_opts} \\
+        {include_args} {pa_args} -o {out_dir} {erlc_opts} \\
         $@
 fi
     """.format(
