@@ -86,10 +86,10 @@ fi
 
 if [ -n "$FIRST" ]; then
     "{erlang_home}"/bin/erlc \\
-        -v {include_args} {pa_args} -o {out_dir} {erlc_opts} \\
+        {include_args} {pa_args} -o {out_dir} {erlc_opts} \\
         $FIRST
     "{erlang_home}"/bin/erlc \\
-        -v {include_args} {pa_args} -pa {out_dir} -o {out_dir} {erlc_opts} \\
+        {include_args} {pa_args} -pa {out_dir} -o {out_dir} {erlc_opts} \\
         $@
 else
     "{erlang_home}"/bin/erlc \\
